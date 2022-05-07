@@ -79,7 +79,7 @@ def main():
     for source_path in sys.stdin:
         source_path = source_path.strip()
         log(f"Parsing {source_path}")
-        size = SourceAnalysis.from_file(source_path, "revng").code_count
+        size = SourceAnalysis.from_file(source_path, "").code_count
         root.record(Path(source_path), size)
 
     import json
