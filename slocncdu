@@ -5,6 +5,8 @@ import argparse
 import sys
 import time
 
+from multiprocessing import cpu_count
+from multiprocessing.pool import Pool
 from path import Path
 from pygount import SourceAnalysis
 from dataclasses import dataclass
@@ -16,6 +18,20 @@ def log(message):
     global verbose
     if verbose:
         sys.stderr.write(message + "\n")
+
+def file_list():
+    for source_path in sys.stdin:
+        source_path = source_path.strip()
+        log(f"Parsing {source_path}")
+
+        if not os.path.isfile(source_path):
+            log(f"Ignoring {source_path}: not a file")
+            continue
+
+        yield source_path
+
+def process_source(source_path):
+    return (source_path, SourceAnalysis.from_file(source_path, "").code_count)
 
 @dataclass
 class File:
@@ -70,16 +86,25 @@ class Directory:
 def main():
     parser = argparse.ArgumentParser(description=".")
     parser.add_argument("--verbose", action="store_true", help="Emit log info.")
+    parser.add_argument("-j",
+                        metavar="JOBS",
+                        dest="jobs",
+                        default=0,
+                        type=int,
+                        help="Emit log info.")
     args = parser.parse_args()
 
     global verbose
     verbose = args.verbose
 
+    jobs = args.jobs
+    if jobs == 0:
+        jobs = cpu_count()
+
+    pool = Pool(jobs)
+
     root = Directory(name="/", entries={})
-    for source_path in sys.stdin:
-        source_path = source_path.strip()
-        log(f"Parsing {source_path}")
-        size = SourceAnalysis.from_file(source_path, "").code_count
+    for source_path, size in pool.imap(process_source, file_list()):
         root.record(Path(source_path), size)
 
     import json
