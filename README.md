@@ -9,5 +9,5 @@ apt-get install -y ncdu
 pip install --user pygount
 PATH="$PATH:$PWD"
 cd $MYPROJECT
-slocncdu $(git ls-files) | ncdu -f-
+git ls-files | slocncdu | ncdu -f-
 ```
